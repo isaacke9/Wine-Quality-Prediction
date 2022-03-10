@@ -1,0 +1,28 @@
+---
+title: "STAT-656-Project"
+author: "Isaac Ke"
+date: "3/9/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Load Packages
+```{r}
+require(caret)
+require(dplyr)
+require(ggplot2)
+```
+
+## Read Data
+```{r}
+data = read.csv("~/GitHub/Wine-Quality-Prediction/WineQT.csv")
+```
+
+## Basic EDA
+```{r}
+str(data)
+pairs(data)
+```
