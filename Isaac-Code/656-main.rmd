@@ -151,6 +151,8 @@ coef(fdaOut$finalModel)
 
 
 # Woah. 
+
+A discriminant plot projects the data on to a single axis (defined by the discriminant function). The concept of a linear discriminant axis reduces the multidimensional classification problem to a single dimension, with the projection achieved so that discrimination between classes is preserved as well as possible.
 ```{r}
 plot(fdaOut$finalModel)
 ```
@@ -182,7 +184,7 @@ auc(roc.multi)
 ```{r}
 rocs = roc.multi[['rocs']]
 plot.roc(rocs[[1]])
-sapply(2:length(rocs),function(i) lines.roc(rs[[i]],col=i))
+sapply(2:length(rocs),function(i) lines.roc(rocs[[i]],col=i))
 ```
 ################################################################################################
 ################################################################################################

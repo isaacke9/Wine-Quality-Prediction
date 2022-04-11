@@ -194,5 +194,5 @@ auc(roc.multi)
 ```{r}
 rocs = roc.multi[['rocs']]
 plot.roc(rocs[[1]])
-sapply(2:length(rocs),function(i) lines.roc(rs[[i]],col=i))
+sapply(2:length(rocs),function(i) lines.roc(rocs[[i]],col=i))
 ```
