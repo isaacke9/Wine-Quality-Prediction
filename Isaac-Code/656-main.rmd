@@ -1,28 +1,290 @@
 ---
 title: "STAT-656-Project"
 author: "Isaac Ke"
-date: "3/9/2022"
+date: "4/7/2022"
 output: html_document
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+set.seed(656)
 ```
 
 ## Load Packages
-```{r}
+```{r, message=FALSE}
 require(caret)
 require(dplyr)
 require(ggplot2)
+require(caret)
+require(e1071)
+require(earth)        # fit MARS models
+require(vip)          # variable importance
+require(glmnet)
+require(lattice)   
+require(pROC)
+require(corrplot)
+require(smotefamily)  # SMOTE
 ```
 
 ## Read Data
 ```{r}
 data = read.csv("~/GitHub/Wine-Quality-Prediction/WineQT.csv")
+str(data)
+head(data)
+```
+## Data Structure
+``` {r, warning=FALSE}
+data$quality = as.factor(data$quality)
+data = dplyr::select(data, -Id)
+str(data)
+attach(data)
 ```
 
+
 ## Basic EDA
+### Check for Missing Data
 ```{r}
-str(data)
-pairs(data)
+summary(data)
+cat("\nthere are ", sum(is.na(data)), " missing data values in the dataset")
 ```
+
+
+### Correlation Plot
+```{r}
+data_cor = data
+data_cor$quality = as.numeric(data_cor$quality)
+data_corr = cor(data_cor)
+corrplot(data_corr, tl.cex = 0.75) # , order = "hclust",
+```
+
+### Scatterplot Matrix
+```{r}
+pairs(data_cor)
+```
+
+### Check for Class Imbalance
+```{r}
+table(data$quality)
+
+ggplot(data, aes(x=quality)) + 
+  geom_bar(fill="darkblue") + 
+  ggtitle("Distribution of Response: Wine Quality Rating (3-8)") +
+  labs(y="Count", x = "Wine Quality Rating") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+```
+We only have entries for classes 3-8. Vast majority of observations are in class 5-6 (and also 7). 
+
+**Only use skew-correcting transformations if the method(s) you are using assume(s) something like normally distributed observations
+
+Prof: "Skew correcting the features is this case isn't necessary as the features get (internally and automatically) processed when fitted the method."
+
+### Check for Skewness (not needed)
+```{r}
+skewnessVec = data %>%
+  sapply(., e1071::skewness)
+
+names(data)[abs(skewnessVec)> 2]
+```
+
+## Data Split
+``` {r}
+Y = make.names(data$quality)
+X = select(data, -quality) 
+
+trainSplit = createDataPartition(y = Y, p = 0.8, list = FALSE)
+
+Ytrain = Y[trainSplit]
+Xtrain = X[trainSplit,]
+XtrainMat = as.matrix(Xtrain)
+
+Ytest  = Y[-trainSplit]
+Xtest  = X[-trainSplit,]
+XtestMat = as.matrix(Xtest)
+```
+
+## Fit FDA (MARS) Classification Model
+flexible discriminant analysis (FDA) using multivariate adaptive regression splines (MARS) basis functions
+
+MARS is an algorithm that creates a piecewise linear model. It captures nonlinearity by automatically:
+ * Allocating the bins ("knots")
+ * Estimating the model in each bin 
+Utilizes hinge functions 
+
+Tuning parameters in MARS:
+ * The degree of interactions between different hinge functions (degree)
+ * the number/location of the knots (nprune)
+ 
+ Use 5-fold cross validation 
+
+> https://rdrr.io/cran/caret/man/bagFDA.html 
+
+``` {r}
+fdaOut = train(x = Xtrain, 
+                y = Ytrain,
+                method = 'fda',
+                metric = 'Accuracy',
+                tuneGrid = expand.grid(degree = 1:5, nprune = c(5,10,20,50,100)),
+                trControl = trainControl(method='CV',number = 5,classProbs = TRUE))
+fdaOut
+plot(fdaOut)
+```
+
+## Best Model's CV Estimate of Testing Error 
+```{r}
+max(fdaOut$results$Accuracy)
+```
+
+## Feature Importance
+``` {r}
+fdaVip = vip(fdaOut,num_features = 11, bar = FALSE, metric = "Accuracy") + 
+  ggtitle("Variable Importance Based on Accuracy") + 
+  theme(plot.title = element_text(hjust = 0.5))
+plot(fdaVip)
+```
+
+``` {r}
+fdaOut$bestTune
+coef(fdaOut$finalModel)
+```
+
+
+
+# Woah. 
+```{r}
+plot(fdaOut$finalModel)
+```
+
+## Prediction on Test Data
+```{r}
+YhatTestFDA = predict(fdaOut$finalModel, Xtest, type='class')
+#YhatTestFDA    = ifelse(probHatTestFDA[,1] > 0.5, 'X1', 'X2')
+```
+
+The confusion matrices
+```{r}
+#table(YhatTestFDA, Ytest)
+confusionMatrix(as.factor(YhatTestFDA), as.factor(Ytest))
+
+#test accuracy
+#cat("\nraw test accuracy:", mean(YhatTestFDA==Ytest))
+```
+
+Note: Model bad at predicting X3, X4 and X8 
+
+## Multi-class ROC Curve 
+```{r, warning=FALSE}
+roc.multi <- multiclass.roc(Ytest, as.ordered(YhatTestFDA))
+auc(roc.multi)
+```
+
+
+```{r}
+rocs = roc.multi[['rocs']]
+plot.roc(rocs[[1]])
+sapply(2:length(rocs),function(i) lines.roc(rs[[i]],col=i))
+```
+################################################################################################
+################################################################################################
+################################################################################################
+################################################################################################
+################################################################################################
+################################################################################################
+################################################################################################
+
+# Logistic Elastic Net
+```{r}
+K            = 2
+trainControl = trainControl(method = "cv", number = K)
+tuneGrid     = expand.grid('alpha'=c(.5,1),'lambda' = seq(0.0001, .01, length.out = 10))
+
+elasticOut   = train(x = Xtrain, y = Ytrain,
+                   method = "glmnet",
+                   family = "multinomial",
+                   trControl = trainControl, tuneGrid = tuneGrid)
+elasticOut$bestTune
+```
+
+Using these selected tuning parameters, let's get some predictions on the test digits data
+
+```{r}
+glmnetOut      = glmnet(x = XtrainMat, y = Ytrain, alpha = elasticOut$bestTune$alpha, family = 'multinomial')
+YhatTestGlmnet = predict(glmnetOut, XtestMat, s=elasticOut$bestTune$lambda, type = 'class')
+#YhatTestGlmnet    = ifelse(probHatTestGlmnet > 0.5, 'X1', 'X2')
+```
+
+```{r}
+#table(YhatTestGlmnet, Ytest)
+confusionMatrix(as.factor(YhatTestGlmnet), as.factor(Ytest))
+
+# test accuracy
+#cat("\nraw test accuracy:", mean(YhatTestGlmnet ==Ytest))
+
+```
+
+## Check out active set
+```{r}
+betaHat  = coef(glmnetOut, s=elasticOut$bestTune$lambda)
+head(betaHat)
+
+# active set for X4
+Sglmnet   = abs(betaHat[-1]$X4) > 1e-16
+
+importantGlmnet = betaHat$X4[-1][as.vector(Sglmnet)]
+importantGlmnet
+```
+
+############################################################################################
+############################################################################################
+############################################################################################
+############################################################################################
+############################################################################################
+############################################################################################
+############################################################################################
+############################################################################################
+############################################################################################
+############################################################################################
+
+# SMOTE
+
+> https://rdrr.io/cran/smotefamily/man/
+> https://medium.com/analytics-vidhya/smote-technique-for-unbalanced-data-of-3-classes-in-r-programming-cardiotocography-data-set-474bb5dbf8dd 
+
+## SMOTE round 1 (X3)
+```{r}
+smote_data1 = SMOTE(X, Y, dup_size = 80)$data
+smote_data1 = rename(smote_data1, quality = class)
+smote_data1$quality = as.factor(smote_data1$quality)
+#str(smote_data1)
+table(smote_data1$quality)
+```
+
+## SMOTE round 2 (X8)
+```{r}
+smote_data2 = SMOTE(select(smote_data1, -quality), select(smote_data1, quality), dup_size = 29)$data
+smote_data2 = rename(smote_data2, quality = class)
+smote_data2$quality = as.factor(smote_data2$quality)
+
+table(smote_data2$quality)
+```
+
+## SMOTE round 3 (X4)
+```{r}
+smote_data3 = SMOTE(select(smote_data2, -quality), select(smote_data2, quality), dup_size = 13)$data
+smote_data3 = rename(smote_data3, quality = class)
+smote_data3$quality = as.factor(smote_data3$quality)
+
+table(smote_data3$quality)
+```
+
+## SMOTE round 4 (X7)
+```{r}
+smote_data4 = SMOTE(select(smote_data3, -quality), select(smote_data3, quality), dup_size = 2)$data
+smote_data4 = rename(smote_data4, quality = class)
+smote_data4$quality = as.factor(smote_data4$quality)
+
+table(smote_data4$quality)
+```
+
+
+
