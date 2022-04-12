@@ -154,7 +154,7 @@ coef(fdaOut$finalModel)
 
 A discriminant plot projects the data on to a single axis (defined by the discriminant function). The concept of a linear discriminant axis reduces the multidimensional classification problem to a single dimension, with the projection achieved so that discrimination between classes is preserved as well as possible.
 ```{r}
-plot(fdaOut$finalModel)
+plot(fdaOut$finalModel) 
 ```
 
 ## Prediction on Test Data
