@@ -1,0 +1,176 @@
+---
+title: "STAT-654-Project"
+author: "Isaac Ke"
+date: "3/9/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+```
+
+## Load Packages
+```{r}
+require(caret)
+require(dplyr)
+require(ggplot2)
+require(corrplot)
+require(glmnet)
+require(pROC)
+```
+
+## Read Data
+```{r}
+set.seed(654)
+data = read.csv("~/GitHub/Wine-Quality-Prediction/WineQT.csv")
+str(data)
+head(data)
+```
+
+## Data Structure
+``` {r, warning=FALSE}
+data$quality[data$quality <=5] = 0
+data$quality[data$quality >=6] = 1
+data$quality = as.factor(data$quality)
+data$quality = relevel(data$quality, ref = "1")
+data = dplyr::select(data, -Id)
+str(data)
+attach(data)
+```
+
+## Basic EDA
+### Check for Missing Data
+```{r}
+summary(data)
+cat("\nthere are ", sum(is.na(data)), " missing data values in the dataset")
+```
+
+### Correlation Plot
+```{r}
+data_cor = data
+data_cor$quality = as.numeric(data_cor$quality)
+data_corr = cor(data_cor)
+corrplot(data_corr, tl.cex = 0.75) # , order = "hclust",
+```
+
+### Check for Class Imbalance
+```{r}
+table(data$quality)
+
+ggplot(data, aes(x=quality)) + 
+  geom_bar(fill="darkblue") + 
+  ggtitle("Distribution of Response: Wine Quality Rating (0=Below Avg vs. 1=Above Avg)") +
+  labs(y="Count", x = "Wine Quality Rating") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+```
+
+## Data Split
+``` {r}
+Y = make.names(data$quality)
+X = select(data, -quality) 
+
+trainSplit = createDataPartition(y = Y, p = 0.8, list = FALSE)
+
+Ytrain = Y[trainSplit]
+Xtrain = X[trainSplit,]
+XtrainMat = as.matrix(Xtrain)
+
+Ytest  = Y[-trainSplit]
+Xtest  = X[-trainSplit,]
+XtestMat = as.matrix(Xtest)
+```
+
+**********************************************************************************
+**********************************************************************************
+**********************************************************************************
+**********************************************************************************
+**********************************************************************************
+**********************************************************************************
+**********************************************************************************
+**********************************************************************************
+**********************************************************************************
+**********************************************************************************
+
+
+# Lasso Regression
+```{r}
+K            = 5
+trainControl = trainControl(method = "cv", number = K)
+tuneGrid     = expand.grid('alpha' = 1, 'lambda' = seq(2e-16, 1, length.out = 10))
+
+lassoOut   = train(x = Xtrain, y = Ytrain,
+                   method = "glmnet",
+                   metric = "Accuracy",
+                   trControl = trainControl, tuneGrid = tuneGrid)
+lassoOut
+```
+
+```{r}
+plot(lassoOut, xlab = "Penalty", ylab = 'K-fold CV')
+```
+
+## Training Error 
+```{r}
+max(lassoOut$results$Accuracy)
+```
+
+```{r}
+matplot(x = lassoOut$finalModel$lambda, t(lassoOut$finalModel$beta),
+        type='l', ylab='Coefficient Path', xlab = 'glmnet lambda grid')
+abline(v = lassoOut$bestTune$lambda)
+
+
+lassoOut$bestTune
+```
+
+
+## Predict on Test Data
+```{r}
+lassoOut_fit      = glmnet(x = XtrainMat, y = Ytrain, alpha = lassoOut$bestTune$alpha, family = 'binomial')
+
+
+#YhatTestGlmnet = predict(lassoOut_fit, XtestMat, s=lassoOut$bestTune$lambda, type = 'class')
+probHatTest    = predict(lassoOut_fit, XtestMat, s=lassoOut$bestTune$lambda, type = 'response')
+YhatTestLasso = ifelse(probHatTest > 0.5, 'X1', 'X0') # ability to change treshold 
+
+```
+
+
+## Confusion Matrix Summary
+```{r}
+confusionMatrix(as.factor(YhatTestLasso), as.factor(Ytest))
+```
+
+## Check out active set
+```{r}
+betaHat  = coef(lassoOut_fit, s=lassoOut$bestTune$lambda)
+betaHat
+
+Sglmnet   = abs(betaHat[-1]) > 1e-16
+
+importantGlmnet = betaHat[-1][as.vector(Sglmnet)]
+importantGlmnet
+```
+
+
+## Visualize Selected Features
+```{r}
+selectedFeatures = abs(betaHat) > 1e-16
+featureNames = names(Xtrain)
+barplot(betaHat[selectedFeatures],horiz=T,
+        cex.names=0.5, las = 1,names.arg = featureNames, xlab='Coefficient')
+```
+
+
+## ROC Cruve
+```{r}
+probHatTest = predict(lassoOut, Xtest, s=lassoOut$bestTune$lambda, type = 'prob')
+rocOut = roc(response = Ytest, probHatTest$X1)
+plot(rocOut)
+```
+
+```{r}
+auc(rocOut)
+```
