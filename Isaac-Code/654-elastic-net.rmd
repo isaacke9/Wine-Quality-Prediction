@@ -54,6 +54,21 @@ data_corr = cor(data_cor)
 corrplot(data_corr, tl.cex = 0.75) # , order = "hclust",
 ```
 
+### Distributions
+```{r}
+plot(density(data$fixed.acidity), main = "Distribution of Fixed Acidity", xlab = "Fixed Acidity") 
+plot(density(data$volatile.acidity), main = "Distribution of Volatile Acidity", xlab = "Volatile Acidity") 
+plot(density(data$citric.acid), main = "Distribution of Citric Acid", xlab = "Citric Acid") 
+plot(density(data$residual.sugar), main = "Distribution of Residual Sugar", xlab = "Residual Sugar") 
+plot(density(data$chlorides), main = "Distribution of Chlorides", xlab = "Chlorides") 
+plot(density(data$free.sulfur.dioxide), main = "Distribution of Free Sulfur Dioxide", xlab = "Free Sulfur Dioxide") 
+plot(density(data$total.sulfur.dioxide), main = "Distribution of Total Sulfur Dioxide", xlab = "Total Sulfur Dioxide") 
+plot(density(data$density), main = "Distribution of Wine Density", xlab = "Wine Density") 
+plot(density(data$pH), main = "Distribution of pH", xlab = "pH") 
+plot(density(data$sulphates), main = "Distribution of Sulphates", xlab = "Sulphates") 
+plot(density(data$alcohol), main = "Distribution of Alcohol", xlab = "Alcohol") 
+```
+
 ### Check for Class Imbalance
 ```{r}
 table(data$quality)
