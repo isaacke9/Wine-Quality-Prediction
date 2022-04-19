@@ -160,7 +160,7 @@ importantGlmnet
 selectedFeatures = abs(betaHat) > 1e-16
 featureNames = names(Xtrain)
 barplot(betaHat[selectedFeatures],horiz=T,
-        cex.names=0.5, las = 1,names.arg = featureNames, xlab='Coefficient')
+        cex.names=0.4, las = 1,names.arg = featureNames, xlab='Coefficient')
 ```
 
 

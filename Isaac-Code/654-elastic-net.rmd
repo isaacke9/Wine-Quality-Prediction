@@ -131,6 +131,7 @@ elasticOut   = train(x = Xtrain, y = Ytrain,
                    trControl = trainControl, tuneGrid = tuneGrid)
 elasticOut
 ```
+
 ```{r}
 plot(elasticOut, xlab = "Penalty", ylab = 'K-fold CV')
 ```
