@@ -1,5 +1,6 @@
 ---
 title: "STAT-654-Project"
+subtitle: "EDA & Elastic Net Model"
 author: "Isaac Ke"
 date: "3/9/2022"
 output: html_document
@@ -7,7 +8,6 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-
 ```
 
 ## Load Packages
@@ -54,7 +54,7 @@ data_corr = cor(data_cor)
 corrplot(data_corr, tl.cex = 0.75) # , order = "hclust",
 ```
 
-### Distributions
+### Marginal Distributions
 ```{r}
 plot(density(data$fixed.acidity), main = "Distribution of Fixed Acidity", xlab = "Fixed Acidity") 
 plot(density(data$volatile.acidity), main = "Distribution of Volatile Acidity", xlab = "Volatile Acidity") 
@@ -131,17 +131,17 @@ elasticOut   = train(x = Xtrain, y = Ytrain,
                    trControl = trainControl, tuneGrid = tuneGrid)
 elasticOut
 ```
-
+## Training Summary Over Grid Search 
 ```{r}
 plot(elasticOut, xlab = "Penalty", ylab = 'K-fold CV')
 ```
 
 
-## Training Error 
+## CV Accuracy  
 ```{r}
 max(elasticOut$results$Accuracy)
 ```
-
+## Coefficient Paths
 ```{r}
 matplot(x = elasticOut$finalModel$lambda, t(elasticOut$finalModel$beta),
         type='l', ylab='Coefficient Path', xlab = 'glmnet lambda grid')
@@ -170,7 +170,7 @@ YhatTestGlmnet = ifelse(probHatTest > 0.5, 'X1', 'X0') # ability to change tresh
 confusionMatrix(as.factor(YhatTestGlmnet), as.factor(Ytest))
 ```
 
-## Check out active set
+## Check out Active Set
 ```{r}
 betaHat  = coef(glmnetOut, s=elasticOut$bestTune$lambda)
 betaHat
@@ -181,15 +181,6 @@ importantGlmnet = betaHat[-1][as.vector(Sglmnet)]
 importantGlmnet
 ```
 
-
-## Visualize Selected Features
-```{r}
-selectedFeatures = abs(betaHat) > 1e-16
-featureNames = names(Xtrain)
-
-# TODO: fix
-#barplot(betaHat[selectedFeatures],horiz=T, cex.names=1, names.arg = featureNames, xlab='Coefficient')
-```
 
 ## ROC Cruve
 ```{r}

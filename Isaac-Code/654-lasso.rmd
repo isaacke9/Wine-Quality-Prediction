@@ -1,5 +1,6 @@
 ---
 title: "STAT-654-Project"
+subtitle: "Lasso Model"
 author: "Isaac Ke"
 date: "3/9/2022"
 output: html_document
@@ -7,7 +8,6 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-
 ```
 
 ## Load Packages
@@ -107,15 +107,17 @@ lassoOut   = train(x = Xtrain, y = Ytrain,
 lassoOut
 ```
 
+## Training Summary Over Grid Search  
 ```{r}
 plot(lassoOut, xlab = "Penalty", ylab = 'K-fold CV')
 ```
 
-## Training Error 
+## CV Accuracy 
 ```{r}
 max(lassoOut$results$Accuracy)
 ```
 
+## Coefficient Paths
 ```{r}
 matplot(x = lassoOut$finalModel$lambda, t(lassoOut$finalModel$beta),
         type='l', ylab='Coefficient Path', xlab = 'glmnet lambda grid')
@@ -143,7 +145,7 @@ YhatTestLasso = ifelse(probHatTest > 0.5, 'X1', 'X0') # ability to change tresho
 confusionMatrix(as.factor(YhatTestLasso), as.factor(Ytest))
 ```
 
-## Check out active set
+## Check out Active Set
 ```{r}
 betaHat  = coef(lassoOut_fit, s=lassoOut$bestTune$lambda)
 betaHat
