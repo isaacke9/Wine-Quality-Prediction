@@ -1,0 +1,242 @@
+---
+title: "STAT-656-Project"
+author: "Isaac Ke"
+date: "4/24/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+set.seed(656)
+```
+
+## Load Packages
+```{r, message=FALSE}
+require(caret)
+require(dplyr)
+require(ggplot2)
+require(caret)
+require(e1071)
+require(vip)          # variable importance
+require(glmnet)
+require(lattice)   
+require(pROC)
+require(corrplot)
+require(smotefamily)  # SMOTE
+require(randomForest)
+require(party)
+require(ranger)
+require(rpart)
+require(rpart.plot)
+require(tree)
+```
+
+## Read Data
+```{r}
+data = read.csv("~/GitHub/Wine-Quality-Prediction/WineQT.csv")
+str(data)
+head(data)
+```
+
+## Data Structure
+``` {r, warning=FALSE}
+data$quality = as.factor(data$quality)
+data = dplyr::select(data, -Id)
+str(data)
+```
+
+```{r}
+Y_presmote = make.names(data$quality)
+X_presmote = select(data, -quality) 
+```
+
+# SMOTE
+
+> https://rdrr.io/cran/smotefamily/man/
+> https://medium.com/analytics-vidhya/smote-technique-for-unbalanced-data-of-3-classes-in-r-programming-cardiotocography-data-set-474bb5dbf8dd 
+
+## SMOTE round 1 (X3)
+Note: If splitting two times (one on Ytrain and one on Ytest), need to change SMOTE() function K parameter to 1 since the test set only has 1 nearest neighbor for the minority class. 
+```{r}
+smote_data1 = SMOTE(X_presmote, Y_presmote, K=2, dup_size = 80)$data
+smote_data1 = rename(smote_data1, quality = class)
+smote_data1$quality = as.factor(smote_data1$quality)
+#str(smote_data1)
+table(smote_data1$quality)
+```
+
+## SMOTE round 2 (X8)
+```{r}
+smote_data2 = SMOTE(select(smote_data1, -quality), select(smote_data1, quality), dup_size = 29)$data
+smote_data2 = rename(smote_data2, quality = class)
+smote_data2$quality = as.factor(smote_data2$quality)
+
+table(smote_data2$quality)
+```
+
+## SMOTE round 3 (X4)
+```{r}
+smote_data3 = SMOTE(select(smote_data2, -quality), select(smote_data2, quality), dup_size = 13)$data
+smote_data3 = rename(smote_data3, quality = class)
+smote_data3$quality = as.factor(smote_data3$quality)
+
+table(smote_data3$quality)
+```
+
+## SMOTE round 4 (X7)
+```{r}
+smote_data4 = SMOTE(select(smote_data3, -quality), select(smote_data3, quality), dup_size = 2)$data
+smote_data4 = rename(smote_data4, quality = class)
+smote_data4$quality = as.factor(smote_data4$quality)
+
+table(smote_data4$quality)
+
+data_bal = smote_data4
+```
+
+
+## Data Split
+``` {r}
+Y = make.names(data_bal$quality)
+X = select(data_bal, -quality) 
+
+trainSplit = createDataPartition(y = Y, p = 0.8, list = FALSE)
+
+Ytrain = Y[trainSplit]
+Xtrain = X[trainSplit,]
+XtrainMat = as.matrix(Xtrain)
+
+Ytest  = Y[-trainSplit]
+Xtest  = X[-trainSplit,]
+XtestMat = as.matrix(Xtest)
+```
+
+### Check for Class Imbalance
+```{r}
+table(Ytrain)
+table(Ytest)
+```
+
+
+
+## Fit Random Forest Model
+
+
+``` {r}
+tuneGrid =  expand.grid(mtry = (1:5),
+                        splitrule = c("gini", "extratrees"),
+                        min.node.size = c(1:3)
+                        ) 
+
+trainControl = trainControl(method='CV',number = 5)
+#,classProbs = TRUE
+
+rfOut = train(x = Xtrain,
+              y = Ytrain,
+                method = 'ranger',
+                metric = 'Accuracy',
+                tuneGrid = tuneGrid,
+                importance = 'impurity',
+                trControl = trainControl)
+rfOut
+plot(rfOut)
+```
+
+## Best Model's CV Estimate of Testing Error 
+```{r}
+max(rfOut$results$Accuracy)
+```
+
+
+## Feature Importance
+``` {r}
+rfVip = vip(rfOut,num_features = 11, bar = FALSE, metric = "Accuracy") + 
+  ggtitle("Variable Importance Based on Accuracy") + 
+  theme(plot.title = element_text(hjust = 0.5))
+plot(rfVip)
+```
+
+``` {r}
+rfOut$bestTune
+rf_final_model = rfOut$finalModel
+```
+
+
+
+## Plot Tree
+https://blog.exploratory.io/visualizing-a-decision-tree-using-r-packages-in-explortory-b26d4cb5e71f 
+https://cran.r-project.org/web/packages/rpart.plot/rpart.plot.pdf 
+```{r}
+# Create a decision tree model
+tree <- rpart(Ytrain~., data=cbind(Xtrain,Ytrain), cp=0.02, method="class")
+
+# Visualize the decision tree with rpart.plot
+rpart.plot(tree, box.palette="RdBu", shadow.col="gray", nn=TRUE, extra=104)
+
+```
+
+## OOB Error Estimate  
+```{r}
+oob_fit_plot = randomForest(x=Xtrain, y=as.factor(Ytrain))
+oob_fit_plot
+plot(oob_fit_plot)
+tail(plot(oob_fit_plot))
+```
+
+# Woah. 
+```{r}
+plot(rfOut$finalModel)
+```
+
+## Prediction on Test Data
+```{r}
+ranger_final_model = ranger(as.factor(Ytrain)~., 
+                            data = as.data.frame(cbind(Xtrain,Ytrain)), 
+                            mtry = 2, 
+                            splitrule = 'extratrees',
+                            min.node.size = 1)
+YhatTestRF = predict(ranger_final_model, Xtest, type='response')
+#YhatTestFDA    = ifelse(probHatTestFDA[,1] > 0.5, 'X1', 'X2')
+```
+
+## The confusion matrices
+```{r}
+#table(YhatTestFDA, Ytest)
+confusionMatrix(as.factor(YhatTestRF$predictions), as.factor(Ytest))
+
+#test accuracy
+#cat("\nraw test accuracy:", mean(YhatTestFDA==Ytest))
+```
+
+## Compare Accuracy to Before SMOTE
+```{r}
+data$quality = make.names(data$quality)
+rfOut_unbal = train(quality~., 
+                data = data,
+                method = 'ranger',
+                metric = 'Accuracy',
+                tuneGrid = tuneGrid,
+                importance = 'impurity',
+                trControl = trainControl)
+rfOut_unbal
+max(rfOut_unbal$results$Accuracy)
+
+# Test Data
+ranger_final_model_unbal = randomForest(x=X_presmote, y=as.factor(Y_presmote))
+YhatTestRF_unbal = predict(ranger_final_model_unbal, Xtest, type='response')
+confusionMatrix(as.factor(YhatTestRF_unbal), as.factor(Ytest))
+```
+
+
+## Multi-class ROC Curve 
+```{r, warning=FALSE}
+roc.multi <- multiclass.roc(Ytest, as.ordered(YhatTestRF$predictions))
+auc(roc.multi)
+```
+
+
+```{r}
+rocs = roc.multi[['rocs']]
+plot.roc(rocs[[1]])
+sapply(2:length(rocs),function(i) lines.roc(rocs[[i]],col=i))
+```
