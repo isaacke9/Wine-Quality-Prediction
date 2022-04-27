@@ -1,14 +1,10 @@
 library(caret)
-#library(dplyr)
-#library(ggplot2)
-#library(earth)
-#library(vip)
+library(dplyr)
 library(glmnet)
-#library(randomForest)
 library(pROC)
 
-wine = read.csv("WineQT.csv")
-wine$quality = factor(wine$quality)
+wine = read.csv("WineQT.csv") # load in data
+wine$quality = factor(wine$quality) # convert response to factor
 
 # train/test split
 set.seed(2021)
@@ -18,7 +14,7 @@ Ytrain = wine[trainIndex,12]
 Xtest = wine[-trainIndex,-c(12,13)]
 Ytest = wine[-trainIndex,12]
 
-# probit
+# tune probit parameters
 trainControl = trainControl(method="cv",number=5)
 tuneGrid = expand.grid('alpha'=c(0,.25,.5,.75,1),'lambda'=seq(.0001,.01,length.out=10))
 probit = train(x = Xtrain,
@@ -33,10 +29,12 @@ plot(probit)
 max(probit$results$Accuracy)
 probit$results[which.max(probit$results$Accuracy),]
 
+# fit model
 probit.fit = glmnet(x = as.matrix(Xtrain),
                     y = Ytrain,
                     alpha = probit$bestTune$alpha,
                     family = binomial(link="probit"))
+# predict on test set
 probit.prob = predict(probit.fit,
                       as.matrix(Xtest),
                       s = probit$bestTune$lambda,
@@ -45,6 +43,7 @@ probit.pred = ifelse(probit.prob > 0.5, 1, 0)
 
 confusionMatrix(as.factor(probit.pred),Ytest) # 71.05%
 
+# roc curve
 probit.pred.roc = predict(probit,
                           Xtest,
                           s = probit$bestTune$lambda,
@@ -55,6 +54,7 @@ auc(probit.roc)
 
 ##########
 
+# test 100 different combinations
 alpha = NULL
 lambda = NULL
 accuracy = NULL
