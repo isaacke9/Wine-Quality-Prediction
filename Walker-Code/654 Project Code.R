@@ -1,10 +1,10 @@
 library(caret)
-library(dplyr)
-library(ggplot2)
-library(earth)
-library(vip)
+#library(dplyr)
+#library(ggplot2)
+#library(earth)
+#library(vip)
 library(glmnet)
-library(randomForest)
+#library(randomForest)
 library(pROC)
 
 wine = read.csv("WineQT.csv")
@@ -96,4 +96,5 @@ quantile(accuracy,c(.025,.975))
 ##########
 
 # variable importance
-barplot(coef(probit.fit,s=probit$bestTune$lambda)[-1][as.vector(abs(coef(probit.fit,s=probit$bestTune$lambda)[-1])>1e-16)])
+barplot(coef(probit.fit,s=probit$bestTune$lambda)[-1][as.vector(abs(coef(probit.fit,s=probit$bestTune$lambda)[-1])>1e-16)],
+        horiz=T,cex.names=.5,las=1,names.arg=names(wine)[c(1:7,9:11)],xlab='Coefficient')
