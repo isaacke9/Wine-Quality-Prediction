@@ -1,8 +1,7 @@
 ---
 title: "STAT-654-Project"
-subtitle: "EDA & Elastic Net Model"
-author: "Isaac Ke"
-date: "3/9/2022"
+subtitle: "EDA & Logistic Elastic Net Regression Model"
+author: "Group 5"
 output: html_document
 ---
 
@@ -110,15 +109,9 @@ XtestMat = as.matrix(Xtest)
 **********************************************************************************
 **********************************************************************************
 **********************************************************************************
-**********************************************************************************
-**********************************************************************************
-**********************************************************************************
-**********************************************************************************
-**********************************************************************************
-**********************************************************************************
 
 
-# Logistic Elastic Net
+# Logistic Elastic Net Regression
 ```{r}
 K            = 5
 trainControl = trainControl(method = "cv", number = K)
@@ -151,16 +144,13 @@ abline(v = elasticOut$bestTune$lambda)
 elasticOut$bestTune
 ```
 
-Using these selected tuning parameters, let's get some predictions on the test digits data
 
 ## Predict on Test Data
 ```{r}
 glmnetOut      = glmnet(x = XtrainMat, y = Ytrain, alpha = elasticOut$bestTune$alpha, family = 'binomial')
 
-
-#YhatTestGlmnet = predict(glmnetOut, XtestMat, s=elasticOut$bestTune$lambda, type = 'class')
 probHatTest    = predict(glmnetOut, XtestMat, s=elasticOut$bestTune$lambda, type = 'response')
-YhatTestGlmnet = ifelse(probHatTest > 0.5, 'X1', 'X0') # ability to change treshold 
+YhatTestGlmnet = ifelse(probHatTest > 0.5, 'X1', 'X0') 
 
 ```
 

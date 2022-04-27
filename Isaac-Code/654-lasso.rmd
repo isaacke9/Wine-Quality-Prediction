@@ -1,8 +1,7 @@
 ---
 title: "STAT-654-Project"
-subtitle: "Lasso Model"
-author: "Isaac Ke"
-date: "3/9/2022"
+subtitle: "Lasso Logistic Regression Model"
+author: "Group 5"
 output: html_document
 ---
 
@@ -85,16 +84,10 @@ XtestMat = as.matrix(Xtest)
 **********************************************************************************
 **********************************************************************************
 **********************************************************************************
-**********************************************************************************
-**********************************************************************************
-**********************************************************************************
-**********************************************************************************
-**********************************************************************************
-**********************************************************************************
-**********************************************************************************
 
 
-# Lasso Regression
+
+# Lasso Logistic Regression 
 ```{r}
 K            = 5
 trainControl = trainControl(method = "cv", number = K)
@@ -132,10 +125,8 @@ lassoOut$bestTune
 ```{r}
 lassoOut_fit      = glmnet(x = XtrainMat, y = Ytrain, alpha = lassoOut$bestTune$alpha, family = 'binomial')
 
-
-#YhatTestGlmnet = predict(lassoOut_fit, XtestMat, s=lassoOut$bestTune$lambda, type = 'class')
 probHatTest    = predict(lassoOut_fit, XtestMat, s=lassoOut$bestTune$lambda, type = 'response')
-YhatTestLasso = ifelse(probHatTest > 0.5, 'X1', 'X0') # ability to change treshold 
+YhatTestLasso = ifelse(probHatTest > 0.5, 'X1', 'X0') 
 
 ```
 

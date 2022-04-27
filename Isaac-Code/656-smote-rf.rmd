@@ -52,6 +52,8 @@ X_presmote = select(data, -quality)
 
 # SMOTE
 
+from Dr. H: "You would split and then adjust for imbalance."
+
 > https://rdrr.io/cran/smotefamily/man/
 > https://medium.com/analytics-vidhya/smote-technique-for-unbalanced-data-of-3-classes-in-r-programming-cardiotocography-data-set-474bb5dbf8dd 
 
