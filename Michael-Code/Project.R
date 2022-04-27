@@ -2,10 +2,10 @@
 
 library(randomForest)
 library(pROC)
-library(partykit)]
+library(partykit)
 library(party)
 
-wine = read.csv("WineQT.csv")
+wine = read.csv("~/GitHub/Wine-Quality-Prediction/WineQT.csv")
 wine = wine[,c(1:12)]
 wine$quality = ifelse(wine$quality <= 5, 0, 1)
 

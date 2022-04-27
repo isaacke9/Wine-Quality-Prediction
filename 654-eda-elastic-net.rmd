@@ -1,0 +1,186 @@
+---
+title: "STAT-654-Project"
+subtitle: "EDA & Logistic Elastic Net Regression Model"
+author: "Group 5"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Load Packages
+```{r}
+require(caret)
+require(dplyr)
+require(ggplot2)
+require(corrplot)
+require(glmnet)
+require(pROC)
+```
+
+## Read Data
+```{r}
+set.seed(654)
+data = read.csv("~/GitHub/Wine-Quality-Prediction/WineQT.csv")
+str(data)
+head(data)
+```
+
+## Data Structure
+``` {r, warning=FALSE}
+data$quality[data$quality <=5] = 0
+data$quality[data$quality >=6] = 1
+data$quality = as.factor(data$quality)
+data$quality = relevel(data$quality, ref = "1")
+data = dplyr::select(data, -Id)
+str(data)
+attach(data)
+```
+
+## Basic EDA
+### Check for Missing Data
+```{r}
+summary(data)
+cat("\nthere are ", sum(is.na(data)), " missing data values in the dataset")
+```
+
+### Correlation Plot
+```{r}
+data_cor = data
+data_cor$quality = as.numeric(data_cor$quality)
+data_corr = cor(data_cor)
+corrplot(data_corr, tl.cex = 0.75) # , order = "hclust",
+```
+
+### Marginal Distributions
+```{r}
+plot(density(data$fixed.acidity), main = "Distribution of Fixed Acidity", xlab = "Fixed Acidity") 
+plot(density(data$volatile.acidity), main = "Distribution of Volatile Acidity", xlab = "Volatile Acidity") 
+plot(density(data$citric.acid), main = "Distribution of Citric Acid", xlab = "Citric Acid") 
+plot(density(data$residual.sugar), main = "Distribution of Residual Sugar", xlab = "Residual Sugar") 
+plot(density(data$chlorides), main = "Distribution of Chlorides", xlab = "Chlorides") 
+plot(density(data$free.sulfur.dioxide), main = "Distribution of Free Sulfur Dioxide", xlab = "Free Sulfur Dioxide") 
+plot(density(data$total.sulfur.dioxide), main = "Distribution of Total Sulfur Dioxide", xlab = "Total Sulfur Dioxide") 
+plot(density(data$density), main = "Distribution of Wine Density", xlab = "Wine Density") 
+plot(density(data$pH), main = "Distribution of pH", xlab = "pH") 
+plot(density(data$sulphates), main = "Distribution of Sulphates", xlab = "Sulphates") 
+plot(density(data$alcohol), main = "Distribution of Alcohol", xlab = "Alcohol") 
+```
+
+### Check for Class Imbalance
+```{r}
+table(data$quality)
+
+ggplot(data, aes(x=quality)) + 
+  geom_bar(fill="darkblue") + 
+  ggtitle("Distribution of Response: Wine Quality Rating (0=Below Avg vs. 1=Above Avg)") +
+  labs(y="Count", x = "Wine Quality Rating") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+```
+
+
+## Data Split
+``` {r}
+Y = make.names(data$quality)
+X = select(data, -quality) 
+
+trainSplit = createDataPartition(y = Y, p = 0.8, list = FALSE)
+
+Ytrain = Y[trainSplit]
+Xtrain = X[trainSplit,]
+XtrainMat = as.matrix(Xtrain)
+
+Ytest  = Y[-trainSplit]
+Xtest  = X[-trainSplit,]
+XtestMat = as.matrix(Xtest)
+```
+
+## Center/Scale Data
+```{r}
+#centerScaleTrain = preProcess(Xtrain, method = c('center','scale'))
+#Xtrain = predict(centerScaleTrain, Xtrain)
+#Xtest  = predict(centerScaleTrain, Xtest)
+#XtestMat = as.matrix(Xtest)
+```
+
+
+**********************************************************************************
+**********************************************************************************
+**********************************************************************************
+
+
+# Logistic Elastic Net Regression
+```{r}
+K            = 5
+trainControl = trainControl(method = "cv", number = K)
+tuneGrid     = expand.grid('alpha'=c(0,.25,.5,.75,1),'lambda' = seq(2e-16, 1, length.out = 10))
+
+elasticOut   = train(x = Xtrain, y = Ytrain,
+                   method = "glmnet",
+                   family = "binomial",
+                   metric = "Accuracy",
+                   trControl = trainControl, tuneGrid = tuneGrid)
+elasticOut
+```
+## Training Summary Over Grid Search 
+```{r}
+plot(elasticOut, xlab = "Penalty", ylab = 'K-fold CV')
+```
+
+
+## CV Accuracy  
+```{r}
+max(elasticOut$results$Accuracy)
+```
+## Coefficient Paths
+```{r}
+matplot(x = elasticOut$finalModel$lambda, t(elasticOut$finalModel$beta),
+        type='l', ylab='Coefficient Path', xlab = 'glmnet lambda grid')
+abline(v = elasticOut$bestTune$lambda)
+
+
+elasticOut$bestTune
+```
+
+
+## Predict on Test Data
+```{r}
+glmnetOut      = glmnet(x = XtrainMat, y = Ytrain, alpha = elasticOut$bestTune$alpha, family = 'binomial')
+
+probHatTest    = predict(glmnetOut, XtestMat, s=elasticOut$bestTune$lambda, type = 'response')
+YhatTestGlmnet = ifelse(probHatTest > 0.5, 'X1', 'X0') 
+
+```
+
+
+## Confusion Matrix Summary
+```{r}
+confusionMatrix(as.factor(YhatTestGlmnet), as.factor(Ytest))
+```
+
+## Check out Active Set
+```{r}
+betaHat  = coef(glmnetOut, s=elasticOut$bestTune$lambda)
+betaHat
+
+Sglmnet   = abs(betaHat[-1]) > 1e-16
+
+importantGlmnet = betaHat[-1][as.vector(Sglmnet)]
+importantGlmnet
+```
+
+
+## ROC Cruve
+```{r}
+probHatTest = predict(elasticOut, Xtest, s=elasticOut$bestTune$lambda, type = 'prob')
+rocOut = roc(response = Ytest, probHatTest$X1)
+plot(rocOut)
+```
+
+```{r}
+auc(rocOut)
+```
+
+
