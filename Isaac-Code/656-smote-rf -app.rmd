@@ -16,12 +16,6 @@ require(caret)
 require(dplyr)
 require(ggplot2)
 require(caret)
-require(e1071)
-require(vip)          # variable importance
-require(glmnet)
-require(lattice)   
-require(pROC)
-require(corrplot)
 require(smotefamily)  # SMOTE
 require(randomForest)
 require(party)
@@ -93,14 +87,19 @@ smote_data4$quality = as.factor(smote_data4$quality)
 
 table(smote_data4$quality)
 
-data_bal = smote_data4
 ```
-
+```{r}
+#data_bal = data.frame(X_presmote, 'quality' = Y_presmote)
+# data_bal = smote_data1
+# data_bal = smote_data2
+# data_bal = smote_data3
+ data_bal = smote_data4
+```
 
 ## Data Split
 ``` {r}
 Y = make.names(data_bal$quality)
-X = select(data_bal, -quality) 
+X = dplyr::select(data_bal, -quality) 
 
 trainSplit = createDataPartition(y = Y, p = 0.8, list = FALSE)
 
@@ -148,7 +147,21 @@ plot(rfOut)
 ```{r}
 max(rfOut$results$Accuracy)
 ```
+```{r}
 
+rf_smote_res = data.frame('round' = seq(0,4), 
+                          'accuracy' = c(0.6596295, 0.7494328, 0.8086329, 0.8342432, 0.8422451)
+           )
+
+ggplot(data=rf_smote_res, aes(x=round, y=accuracy)) +
+  geom_step(size=1.5)+
+  geom_point(size=3)+
+  ggtitle("Plot of CV Accuracy for Each Round of SMOTE Sampling of Minority Class") +
+  theme(plot.title = element_text(hjust = 0.5, size=15)) +
+  xlab("SMOTE Round") + ylab("Random Forest CV Test Accuracy Estimate")
+
+
+```
 
 ## Feature Importance
 ``` {r}
