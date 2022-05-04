@@ -40,6 +40,7 @@ ui <- fluidPage(
 
         # Show a plot of the generated distribution
         mainPanel(
+          h4("Three figures are shown below:"),
           p("(1) The bar plot displays the distribution of the class labels
             after the given number of SMOTE rounds.") ,
           p("(2) Below the bar plot, a line graph is given that illustrates how the
@@ -53,11 +54,12 @@ ui <- fluidPage(
             every subsequent round of SMOTE."),
 
           plotOutput("histPlot"),
-          plotOutput("lineGraph"),
+          plotOutput("lineGraph")
         )
     ),
     fluidRow(
       column(12,
+             h3("(3) Sample Synthetic Observations Created for Minority Class"),
              dataTableOutput('table')
       )
     )
@@ -65,9 +67,12 @@ ui <- fluidPage(
 
 # Define server logic required to draw a histogram
 server <- function(input, output) {
-    # Example SMOTEd data from SMOTE round
+    # Example SMOTE'd data from SMOTE round
     output$table <- renderDataTable({
-      if(input$smoteNum==1) {
+      if(input$smoteNum==0) {
+        data.frame("not applicable" = c("no SMOTE performed yet"))
+      }
+      else if(input$smoteNum==1) {
         tail(filter(smote_data1, quality=='X3'))
       }
       else if(input$smoteNum==2) {
@@ -85,35 +90,35 @@ server <- function(input, output) {
         if(input$smoteNum ==0) {
           ggplot(data, aes(x=quality)) + 
             geom_bar(fill="darkblue") + 
-            ggtitle("Distribution of Response: Wine Quality Rating") +
+            ggtitle("(1) Distribution of Response: Wine Quality Rating") +
             labs(y="Count", x = "Wine Quality Rating") +
             theme(plot.title = element_text(hjust = 0.5))
         }
         else if(input$smoteNum ==1) {
           ggplot(smote_data1, aes(x=quality)) + 
             geom_bar(fill="darkblue") + 
-            ggtitle("Distribution of Response: Wine Quality Rating") +
+            ggtitle("(1) Distribution of Response: Wine Quality Rating") +
             labs(y="Count", x = "Wine Quality Rating") +
             theme(plot.title = element_text(hjust = 0.5))
         }
         else if(input$smoteNum ==2) {
           ggplot(smote_data2, aes(x=quality)) + 
             geom_bar(fill="darkblue") + 
-            ggtitle("Distribution of Response: Wine Quality Rating") +
+            ggtitle("(1) Distribution of Response: Wine Quality Rating") +
             labs(y="Count", x = "Wine Quality Rating") +
             theme(plot.title = element_text(hjust = 0.5))
         }
         else if(input$smoteNum ==3) {
           ggplot(smote_data3, aes(x=quality)) + 
             geom_bar(fill="darkblue") + 
-            ggtitle("Distribution of Response: Wine Quality Rating") +
+            ggtitle("(1) Distribution of Response: Wine Quality Rating") +
             labs(y="Count", x = "Wine Quality Rating") +
             theme(plot.title = element_text(hjust = 0.5))
         }
         else if(input$smoteNum ==4) {
           ggplot(smote_data4, aes(x=quality)) + 
             geom_bar(fill="darkblue") + 
-            ggtitle("Distribution of Response: Wine Quality Rating") +
+            ggtitle("(1) Distribution of Response: Wine Quality Rating") +
             labs(y="Count", x = "Wine Quality Rating") +
             theme(plot.title = element_text(hjust = 0.5))
         }
@@ -124,7 +129,7 @@ server <- function(input, output) {
         ggplot(data=rf_smote_res[1,], aes(x=round, y=accuracy)) +
           geom_step(aes(col="blue"), size = 1)+
           geom_point(aes(col="blue"), size = 4)+
-          ggtitle("Plot of CV Accuracy for Each Round of SMOTE Sampling of Minority Class") +
+          ggtitle("(2) Plot of CV Accuracy for Each Round of SMOTE Sampling of Minority Class") +
           theme(plot.title = element_text(hjust = 0.5), legend.position="none") +
           xlab("SMOTE Round") + ylab("Random Forest CV Test Accuracy Estimate") +
           xlim(0,4) +
@@ -134,7 +139,7 @@ server <- function(input, output) {
         ggplot(data=rf_smote_res[1:2,], aes(x=round, y=accuracy)) +
           geom_step(aes(col="blue"), size = 1)+
           geom_point(aes(col="blue"), size = 4)+
-          ggtitle("Plot of CV Accuracy for Each Round of SMOTE Sampling of Minority Class") +
+          ggtitle("(2) Plot of CV Accuracy for Each Round of SMOTE Sampling of Minority Class") +
           theme(plot.title = element_text(hjust = 0.5), legend.position="none") +
           xlab("SMOTE Round") + ylab("Random Forest CV Test Accuracy Estimate") +
           xlim(0,4) +
@@ -144,7 +149,7 @@ server <- function(input, output) {
         ggplot(data=rf_smote_res[1:3,], aes(x=round, y=accuracy)) +
           geom_step(aes(col="blue"), size = 1)+
           geom_point(aes(col="blue"), size = 4)+
-          ggtitle("Plot of CV Accuracy for Each Round of SMOTE Sampling of Minority Class") +
+          ggtitle("(2) Plot of CV Accuracy for Each Round of SMOTE Sampling of Minority Class") +
           theme(plot.title = element_text(hjust = 0.5), legend.position="none") +
           xlab("SMOTE Round") + ylab("Random Forest CV Test Accuracy Estimate") +
           xlim(0,4) +
@@ -154,7 +159,7 @@ server <- function(input, output) {
         ggplot(data=rf_smote_res[1:4,], aes(x=round, y=accuracy)) +
           geom_step(aes(col="blue"), size = 1)+
           geom_point(aes(col="blue"), size = 4)+
-          ggtitle("Plot of CV Accuracy for Each Round of SMOTE Sampling of Minority Class") +
+          ggtitle("(2) Plot of CV Accuracy for Each Round of SMOTE Sampling of Minority Class") +
           theme(plot.title = element_text(hjust = 0.5), legend.position="none") +
           xlab("SMOTE Round") + ylab("Random Forest CV Test Accuracy Estimate") +
           xlim(0,4) +
@@ -164,7 +169,7 @@ server <- function(input, output) {
         ggplot(data=rf_smote_res[1:5,], aes(x=round, y=accuracy)) +
           geom_step(aes(col="blue"), size = 1)+
           geom_point(aes(col="blue"), size = 4)+
-          ggtitle("Plot of CV Accuracy for Each Round of SMOTE Sampling of Minority Class") +
+          ggtitle("(2) Plot of CV Accuracy for Each Round of SMOTE Sampling of Minority Class") +
           theme(plot.title = element_text(hjust = 0.5), legend.position="none") +
           xlab("SMOTE Round") + ylab("Random Forest CV Test Accuracy Estimate") +
           xlim(0,4) +
