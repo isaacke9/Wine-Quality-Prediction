@@ -12,9 +12,9 @@ require(rpart)
 require(rpart.plot)
 require(tree)
 
-setwd("~/GitHub/Wine-Quality-Prediction/Shiny-App/Wine-Quality-Shiny-App")
-load('data/wineData.Rdata')
-load('data/rf_smote_res.Rdata')
+#setwd("~/GitHub/Wine-Quality-Prediction/Shiny-App/Wine-Quality-Shiny-App")
+load('winedata.rdata')
+load('rf_smote_res.rdata')
 
 # Define UI for application 
 ui <- fluidPage(
@@ -40,6 +40,7 @@ ui <- fluidPage(
 
         # Show a plot of the generated distribution
         mainPanel(
+          h2("Isaac Ke, Michael Lee, Walker Emmert"),
           h4("Three figures are shown below:"),
           p("(1) The bar plot displays the distribution of the class labels
             after the given number of SMOTE rounds.") ,
