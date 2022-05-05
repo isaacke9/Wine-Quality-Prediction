@@ -1,0 +1,14 @@
+name: wine-quality-rf-smote
+title: wine-quality-rf-smote
+username:
+account: isaacke
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 6243624
+bundleId: 5874992
+url: https://isaacke.shinyapps.io/wine-quality-rf-smote/
+when: 1651785532.44722
+lastSyncTime: 1651785532.44722
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: rf_smote_res.Rdata|winedata.RData

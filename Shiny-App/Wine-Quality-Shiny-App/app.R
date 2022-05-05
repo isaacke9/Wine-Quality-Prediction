@@ -13,8 +13,18 @@ require(rpart.plot)
 require(tree)
 
 #setwd("~/GitHub/Wine-Quality-Prediction/Shiny-App/Wine-Quality-Shiny-App")
-load('winedata.rdata')
-load('rf_smote_res.rdata')
+load('./data/data.Rda')
+load('./data/data_bal.Rda')
+load('./data/smote_data1.Rda')
+load('./data/smote_data2.Rda')
+load('./data/smote_data3.Rda')
+load('./data/smote_data4.Rda')
+load('./data/X_presmote.Rda')
+load('./data/Y_presmote.Rda')
+load('./data/rf_smote_res.Rda')
+
+#load('https://github.com/isaacke9/Wine-Quality-Prediction/blob/main/Shiny-App/Wine-Quality-Shiny-App/winedata.RData')
+#load('https://github.com/isaacke9/Wine-Quality-Prediction/blob/main/Shiny-App/Wine-Quality-Shiny-App/rf_smote_res.Rdata')
 
 # Define UI for application 
 ui <- fluidPage(
